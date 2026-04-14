@@ -9,6 +9,16 @@ COPY src/ ./src/
 COPY public/ ./public/
 COPY scripts/ ./scripts/
 
+# Install cloudflared
+RUN apt-get update && apt-get install -y curl && \
+    curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+    -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared && \
+    apt-get clean
+
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 EXPOSE 3456
 
-CMD ["bun", "run", "src/server.ts"]
+CMD ["./start.sh"]

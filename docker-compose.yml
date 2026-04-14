@@ -14,6 +14,11 @@ services:
     restart: unless-stopped
     networks:
       - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.calc.rule=Host(`terriblecode.eele14.dev`)"
+      - "traefik.http.routers.calc.entrypoints=web,websecure"
+      - "traefik.http.services.calc.loadbalancer.server.port=${PORT}"
 
 networks:
   dokploy-network:

@@ -46,7 +46,8 @@ const segments: SegmentDef[] = [
         `const _hist = await query('SELECT * FROM state_history');\n` +
         `const _dispRows = _hist.filter(r => r.key === 'display_buffer');\n` +
         `const _cur = _dispRows.length > 0 ? _dispRows[_dispRows.length - 1].value : '';\n` +
-        `const _appended = (_cur === '0' || _cur === null || _cur === '') ? '${d}' : _cur + '${d}';\n` +
+        `const _curClean = (_cur || '').replace(/,/g, '');\n` +
+        `const _appended = (_curClean === '0' || _curClean === '') ? '${d}' : _curClean + '${d}';\n` +
         `await query("INSERT INTO state_history (key, value) VALUES ('display_buffer', $1)", [_appended]);\n` +
         `context.display_buffer = _appended;`,
       next_segment: "validate_display",
@@ -109,9 +110,7 @@ const segments: SegmentDef[] = [
     key: "fetch_ui_layout",
     code:
       `const _layouts = await query('SELECT * FROM ui_layouts');\n` +
-      `const _layoutKeys = ['layout_standard', 'layout_shuffled', 'layout_wide'];\n` +
-      `const _chosen = _layoutKeys[Math.floor(Math.random() * _layoutKeys.length)];\n` +
-      `const _layout = _layouts.find(l => l.layout_key === _chosen);\n` +
+      `const _layout = _layouts.find(l => l.layout_key === 'layout_standard');\n` +
       `context.buttons_html = _layout ? _layout.html : '';`,
     next_segment: "apply_ui_layout",
     description:

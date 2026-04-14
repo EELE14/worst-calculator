@@ -9,6 +9,6 @@ COPY src/ ./src/
 COPY public/ ./public/
 COPY scripts/ ./scripts/
 
-EXPOSE 3000
+EXPOSE 3456
 
 CMD ["bun", "run", "src/server.ts"]

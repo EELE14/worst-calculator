@@ -7,6 +7,7 @@ RUN bun install --frozen-lockfile
 
 COPY src/ ./src/
 COPY public/ ./public/
+COPY scripts/ ./scripts/
 
 EXPOSE 3000
 

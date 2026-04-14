@@ -20,4 +20,4 @@ eval().
 
 7. Segments chain recursively. Pressing = runs through 14 logical segments. Each has a pre, a main, and a post. Between and after each triad the loader runs additional integrity scans of all five tables.
 
-The activity feed above shows every database call and HTTP request as it happens during execution. The wait time you experience is determined entirely by PostgreSQL round-trip latency multiplied by the number of calls.
+The wait time you experience is determined entirely by PostgreSQL round-trip latency multiplied by the number of calls.

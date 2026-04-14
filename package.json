@@ -1,0 +1,21 @@
+{
+  "name": "worst-calculator",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "seed": "bun run scripts/seed-database.ts",
+    "start": "bun run src/server.ts",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pg": "^8.20.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  }
+}

@@ -1,0 +1,567 @@
+<!-- Copyright (c) 2026 eele14. All Rights Reserved. -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculator</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: #1a1a1a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 48px 20px 80px;
+        gap: 28px;
+        font-family: "Courier New", monospace;
+      }
+
+      #app {
+        background: #2a2a2a;
+        border-radius: 8px;
+        padding: 20px;
+        width: 280px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      #display-container {
+        background: #111;
+        border-radius: 4px;
+        min-height: 60px;
+        padding: 10px 14px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+        overflow: hidden;
+      }
+
+      .display-value {
+        color: #e8f4e8;
+        font-size: 2rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        word-break: break-all;
+        text-align: right;
+        width: 100%;
+      }
+
+      .display-value.result {
+        color: #88ff88;
+      }
+
+      #buttons-container {
+        min-height: 200px;
+      }
+
+      .btn-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100% !important;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        flex: 1;
+        width: var(--btn-width, 60px);
+        min-width: 0;
+        height: 52px;
+        background: #3a3a3a;
+        color: #ddd;
+        border: 1px solid #555;
+        border-radius: 4px;
+        font-size: 1.1rem;
+        font-family: "Courier New", monospace;
+        cursor: pointer;
+        transition: background 0.08s;
+      }
+
+      .btn:hover {
+        background: #4a4a4a;
+      }
+      .btn:active {
+        background: #222;
+      }
+
+      #loading {
+        position: absolute;
+        inset: 0;
+        background: rgba(26, 26, 26, 0.82);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        z-index: 10;
+      }
+
+      #loading.hidden {
+        display: none;
+      }
+
+      #loading-text {
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .section {
+        width: 520px;
+        max-width: calc(100vw - 40px);
+      }
+
+      .section-label {
+        color: #444;
+        font-size: 0.6rem;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        padding-left: 1px;
+      }
+
+      #activity-feed {
+        background: #0c0c0c;
+        border: 1px solid #222;
+        border-radius: 4px;
+        padding: 12px 14px;
+        font-size: 0.72rem;
+        line-height: 1.75;
+        max-height: 320px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #activity-feed::-webkit-scrollbar {
+        width: 3px;
+      }
+      #activity-feed::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #activity-feed::-webkit-scrollbar-thumb {
+        background: #2a2a2a;
+        border-radius: 2px;
+      }
+
+      .fe {
+        display: block;
+        white-space: pre;
+        line-height: 1.65;
+      }
+
+      .fe-idle {
+        color: #2e2e2e;
+        font-style: italic;
+      }
+
+      .fe-triad {
+        color: #b0b0b0;
+        font-weight: bold;
+        margin-top: 8px;
+      }
+      .fe-triad:first-child {
+        margin-top: 0;
+      }
+
+      .fe-scan {
+        color: #383840;
+      }
+
+      .fe-snapshot {
+        color: #2c2c33;
+      }
+      .fe-verify {
+        color: #2c2c33;
+      }
+
+      .fe-sweep {
+        color: #242428;
+      }
+
+      .fe-pre {
+        color: #55556a;
+        margin-top: 2px;
+      }
+      .fe-post {
+        color: #55556a;
+      }
+      .fe-main {
+        color: #7aa2bb;
+        font-weight: bold;
+        margin-top: 2px;
+      }
+
+      .fe-select {
+        color: #3a9fbf;
+      }
+      .fe-insert {
+        color: #c08030;
+      }
+
+      .fe-ping {
+        color: #8050a8;
+      }
+
+      .fe-done {
+        color: #4a9a4a;
+        font-weight: bold;
+        margin-top: 6px;
+      }
+
+      #explain-content {
+        color: #555;
+        font-size: 0.78rem;
+        line-height: 1.85;
+      }
+
+      #explain-content p {
+        margin-bottom: 14px;
+      }
+
+      #explain-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      .explain-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 14px 0;
+      }
+
+      .explain-step {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        gap: 0 10px;
+        color: #444;
+      }
+
+      .explain-step-num {
+        color: #333;
+        text-align: right;
+        padding-top: 0px;
+      }
+
+      .explain-step b {
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="loading">
+        <span id="loading-text">fetching from database</span>
+      </div>
+      <div id="display-container"></div>
+      <div id="buttons-container"></div>
+    </div>
+
+    <div class="section" id="activity-section">
+      <div class="section-label">behind the scenes</div>
+      <div id="activity-feed">
+        <span class="fe fe-idle"
+          >press a button to watch the database calls happen in real time</span
+        >
+      </div>
+    </div>
+
+    <div class="section" id="explain-section">
+      <div class="section-label">how this works</div>
+      <div id="explain-content">
+        <p>
+          This is a fully functional calculator. It also is, by design,
+          catastrophically inefficient. Every number you see on screen was
+          fetched from a PostgreSQL database. No arithmetic happens in this page
+          or the server, only in database-stored code strings executed via
+          <code>eval()</code>.
+        </p>
+
+        <div class="explain-steps">
+          <div class="explain-step">
+            <span class="explain-step-num">1</span>
+            <span
+              ><b>Nothing is local.</b> All logic lives in the
+              <code>segments</code> table as JavaScript strings. The server
+              fetches them and <code>eval()</code>s them.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">2</span>
+            <span
+              ><b>No WHERE clauses.</b> Every lookup does
+              <code>SELECT * FROM segments</code> — all 111 rows — then filters
+              the right one in JavaScript.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">3</span>
+            <span
+              ><b>Every segment is three.</b> Before any segment runs, a
+              <em>pre</em> segment fires to check permissions. After it runs, a
+              <em>post</em> segment verifies the result. One logical action =
+              three database lookups.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">4</span>
+            <span
+              ><b>State is never read directly.</b> To know the current display
+              value, the server fetches the complete history of all state
+              changes ever written, then replays them from scratch.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">5</span>
+            <span
+              ><b>Every query opens a new TCP connection.</b> There is no
+              connection pool. Each query: new connection -> query -> close. And
+              before each real query, a throwaway probe connection runs
+              <code>SELECT 1</code> and closes.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">6</span>
+            <span
+              ><b>Every pre and post calls this server via HTTP.</b> That
+              loopback call triggers four more full-table queries, each over
+              their own two TCP connections.</span
+            >
+          </div>
+          <div class="explain-step">
+            <span class="explain-step-num">7</span>
+            <span
+              ><b>Segments chain recursively.</b> Pressing <code>=</code> runs
+              through 14 logical segments. Each has a pre, a main, and a post.
+              Between and after each triad the loader runs additional integrity
+              scans of all five tables.</span
+            >
+          </div>
+        </div>
+
+        <p>
+          The activity feed above shows every database call and HTTP request as
+          it happens during execution. The wait time you experience is
+          determined entirely by PostgreSQL round-trip latency multiplied by the
+          number of calls. There are no artificial delays.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      var streamId = crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+      var displayEl = document.getElementById("display-container");
+      var buttonsEl = document.getElementById("buttons-container");
+      var loadingEl = document.getElementById("loading");
+      var feedEl = document.getElementById("activity-feed");
+
+      var currentContext = {
+        display_buffer: null,
+        operand_1: null,
+        operand_2: null,
+        operator: null,
+        result: null,
+      };
+
+      var RENDERERS = {
+        request_start: function (d) {
+          return '<span class="fe fe-triad">▶ ' + d.segment_key + "</span>";
+        },
+        triad_start: function (d) {
+          var pad = "─".repeat(Math.max(2, 36 - d.key.length));
+          return (
+            '<span class="fe fe-triad">── ' + d.key + " " + pad + "</span>"
+          );
+        },
+        loader_scan: function (d) {
+          return (
+            '<span class="fe fe-scan">  ⟳ scan ' +
+            d.table +
+            " → " +
+            d.target +
+            "</span>"
+          );
+        },
+        loader_snapshot: function (d) {
+          return (
+            '<span class="fe fe-snapshot">  · snapshot ' + d.table + "</span>"
+          );
+        },
+        loader_verify: function (d) {
+          return '<span class="fe fe-verify">  · verify ' + d.table + "</span>";
+        },
+        loader_sweep: function (d) {
+          return '<span class="fe fe-sweep">  ◌ sweep ' + d.table + "</span>";
+        },
+        phase_start: function (d) {
+          if (d.phase === "main") {
+            return '<span class="fe fe-main">  [main] ' + d.key + "</span>";
+          }
+          var label = d.phase === "pre" ? "pre_" + d.key : "post_" + d.key;
+          var cls = d.phase === "pre" ? "fe-pre" : "fe-post";
+          return (
+            '<span class="fe ' +
+            cls +
+            '">  [' +
+            d.phase +
+            "] " +
+            label +
+            "</span>"
+          );
+        },
+        seg_query: function (d) {
+          if (d.op === "SELECT") {
+            return (
+              '<span class="fe fe-select">    ← SELECT * FROM ' +
+              d.table +
+              "</span>"
+            );
+          }
+          return (
+            '<span class="fe fe-insert">    ↑ INSERT INTO ' +
+            d.table +
+            "</span>"
+          );
+        },
+        seg_ping: function () {
+          return '<span class="fe fe-ping">    ⟳ ping → GET /ping  (4× SELECT * inside)</span>';
+        },
+        chain_done: function (d) {
+          return (
+            '<span class="fe fe-done">✓ ' +
+            d.segments +
+            " segment" +
+            (d.segments !== 1 ? "s" : "") +
+            " · " +
+            d.duration_ms +
+            "ms</span>"
+          );
+        },
+
+        phase_done: function () {
+          return "";
+        },
+        connected: function () {
+          return "";
+        },
+      };
+
+      function appendToFeed(html) {
+        if (!html) return;
+        feedEl.insertAdjacentHTML("beforeend", html);
+        feedEl.scrollTop = feedEl.scrollHeight;
+      }
+
+      var evtSource = new EventSource("/stream?id=" + streamId);
+
+      evtSource.onmessage = function (e) {
+        var data;
+        try {
+          data = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        var renderer = RENDERERS[data.type];
+        if (renderer) appendToFeed(renderer(data));
+      };
+
+      evtSource.onerror = function () {};
+
+      function pressSegment(segmentKey) {
+        feedEl.innerHTML = "";
+        loadingEl.classList.remove("hidden");
+
+        fetch("/segment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            segment_key: segmentKey,
+            context: currentContext,
+            stream_id: streamId,
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (ctx) {
+            if (ctx.html) {
+              displayEl.innerHTML = ctx.html;
+            } else if (ctx.display_buffer != null) {
+              displayEl.innerHTML =
+                '<div class="display-value">' + ctx.display_buffer + "</div>";
+            }
+
+            if (ctx.buttons_html) {
+              buttonsEl.innerHTML = ctx.buttons_html;
+            }
+
+            currentContext = {
+              display_buffer: ctx.display_buffer,
+              operand_1: ctx.operand_1,
+              operand_2: ctx.operand_2,
+              operator: ctx.operator,
+              result: ctx.result,
+            };
+
+            loadingEl.classList.add("hidden");
+          })
+          .catch(function () {
+            loadingEl.classList.add("hidden");
+          });
+      }
+
+      function pressDigit(n) {
+        pressSegment("digit_" + n);
+      }
+      function pressEquals() {
+        pressSegment("equals_entry");
+      }
+      function pressClear() {
+        pressSegment("decoy_reset");
+      }
+
+      function pressOperator(op) {
+        var map = {
+          "+": "op_add",
+          "-": "op_subtract",
+          "*": "op_multiply",
+          "/": "op_divide",
+        };
+        if (map[op]) pressSegment(map[op]);
+      }
+
+      window.addEventListener("load", function () {
+        displayEl.innerHTML = '<div class="display-value">0</div>';
+        pressSegment("fetch_ui_layout");
+      });
+    </script>
+  </body>
+</html>

@@ -29,6 +29,7 @@ function json(data: unknown, status = 200): Response {
 
 Bun.serve({
   port: CONFIG.SERVER.PORT,
+  idleTimeout: 0,
 
   async fetch(req: Request): Promise<Response> {
     const url = new URL(req.url);
@@ -88,6 +89,15 @@ Bun.serve({
 
             const hello = `data: ${JSON.stringify({ type: EVENTS.CONNECTED, id })}\n\n`;
             controller.enqueue(encoder.encode(hello));
+
+            const keepalive = setInterval(() => {
+              try {
+                controller.enqueue(encoder.encode(": keepalive\n\n"));
+              } catch {
+                clearInterval(keepalive);
+                deregisterEmitter(id);
+              }
+            }, 30_000);
           },
           cancel() {
             deregisterEmitter(id);

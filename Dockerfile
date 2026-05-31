@@ -8,6 +8,7 @@ RUN bun install --frozen-lockfile
 COPY src/ ./src/
 COPY public/ ./public/
 COPY scripts/ ./scripts/
+COPY database/ ./database/
 
 # Install cloudflared
 RUN apt-get update && apt-get install -y curl && \

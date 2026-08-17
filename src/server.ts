@@ -1,3 +1,4 @@
+// Connected Discord-GitHub
 /* Copyright (c) 2026 eele14. All Rights Reserved. */
 import { runChain, makeContext } from "./segment-loader.ts";
 import type { CalculatorContext } from "./types.ts";
@@ -57,6 +58,10 @@ Bun.serve({
 
         const emit = stream_id ? getEmitter(stream_id) : undefined;
 
+        // Client sends back its last context so state carries over between
+        // button presses, but stuff like the chain log, timer and override
+        // flags cant come from the client, otherwise a leftover
+        // _next_override from an old request could hijack this chain
         const ctx = makeContext(clientContext ?? {});
         ctx.segment_chain = [];
         ctx._start_time = Date.now();
@@ -77,6 +82,10 @@ Bun.serve({
 
         const stream = new ReadableStream({
           start(controller) {
+            //  registerEmitter makes this controller reachable from the
+            // /segment request, which is a completely different connection.
+            // thats how runChains progress events (segment-loader.ts) show
+            // up here instead of only in the POST response
             const emit: Emitter = (type, data) => {
               try {
                 const payload = `data: ${JSON.stringify({ type, ...data })}\n\n`;
@@ -90,6 +99,7 @@ Bun.serve({
             const hello = `data: ${JSON.stringify({ type: EVENTS.CONNECTED, id })}\n\n`;
             controller.enqueue(encoder.encode(hello));
 
+            // keepalive ping to not lose connections behind proxies or an idle tab
             const keepalive = setInterval(() => {
               try {
                 controller.enqueue(encoder.encode(": keepalive\n\n"));
@@ -99,6 +109,9 @@ Bun.serve({
               }
             }, 30_000);
           },
+          // fires when the client disconnects, tab closed etc. without this
+          // the emitter map keeps a dead controller forever and every
+          // enqueue after that just throws
           cancel() {
             deregisterEmitter(id);
           },
@@ -127,6 +140,8 @@ Bun.serve({
       if (req.method === "GET" && layoutMatch) {
         const key = layoutMatch[1];
 
+        // same deal as everywhere else in this project, no WHERE clause, just
+        // grab every layout row and filter for the one we want in JS
         const allLayouts = await query("SELECT * FROM ui_layouts");
         const layout = allLayouts.find(
           (r) => (r as Record<string, unknown>).layout_key === key,
@@ -165,11 +180,6 @@ Bun.serve({
   },
 });
 
-console.log(
-  `Horrible Calculator running on http://localhost:${CONFIG.SERVER.PORT}`,
-);
-console.log(
-  `Pressing = will trigger 70+ sequential database calls. This is intentional.`,
-);
+console.log(`running on http://localhost:${CONFIG.SERVER.PORT}`);
 
 startJanitor();

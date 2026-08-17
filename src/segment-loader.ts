@@ -1,3 +1,4 @@
+// Connected Discord-GitHub
 /* Copyright (c) 2026 eele14. All Rights Reserved. */
 import { query } from "./db.ts";
 import type { CalculatorContext, Emitter } from "./types.ts";
@@ -32,6 +33,9 @@ function findSegment(
   return row;
 }
 
+// Segment code calls query() with raw SQL it wrote itself, so I cant know
+// ahead of time what table/op its hitting. Sniffing the string is the only
+// way to label the SSE event without changing the segments calling contract.
 function parseQueryMetadata(sql: string): {
   op: "SELECT" | "INSERT";
   table: string;
@@ -44,6 +48,12 @@ function parseQueryMetadata(sql: string): {
   return { op, table };
 }
 
+// Every logical step is actually three segments: a "pre" that gates on
+// permission, the named segment itself, and a "post" that verifies the
+// result. None of the three trust each others output beyond whats on
+// `context` so each is fetched and evald independently rather than as
+// one batch, which is kinda the point of this project being an incredibly
+// inefficient calculator.
 export async function runChain(
   segmentKey: string,
   context: CalculatorContext,
@@ -77,6 +87,10 @@ export async function runChain(
   await evalSegment(mainRow.code as string, context, emit);
   emit?.(EVENTS.PHASE_DONE, { key: segmentKey, phase: PHASE.MAIN });
 
+  // A segment can redirect the chain at runtime
+  //  by setting _next_override on the context
+  // during eval. I snapshot and clear it right away so a later segment
+  // in the same chain doesnt accidentally inherit a stale redirect.
   const nextOverride = context._next_override;
   delete context._next_override;
   context.segment_chain.push(segmentKey);
@@ -107,6 +121,9 @@ export async function runChain(
       ? nextOverride
       : ((mainRow.next_segment as string | null) ?? null);
 
+  // each segment in the chain is its own
+  // stack frame, so context and the accumulated segment_chain flow
+  // forward naturally without a manual loop-and-mutate structure.
   if (nextKey) {
     return runChain(nextKey, context, emit);
   }
@@ -122,11 +139,21 @@ async function ping(): Promise<void> {
   await fetch(CONFIG.PING_URL);
 }
 
+// segment code is in the database as a plain string, so
+// the only way to actually run it is to eval it into a function. wrapping
+// it in (async function(context, query, ping) {...}) means the query param
+// just overrides the imported query with the same name, so segment code
+// always ends up calling our wrapper below instead of the db directly.
+// Ping is really just a convention though, nothing stops a segment from
+// calling the global fetch itself instead and skipping the SEG_PING event
 async function evalSegment(
   code: string,
   context: CalculatorContext,
   emit?: Emitter,
 ): Promise<void> {
+  // this is the only query/ping a segment ever gets, using the real ones
+  // directly would skip the SEG_QUERY/SEG_PING events entirely and the
+  // stream would just go quiet mid-segment
   const wrappedQuery = async (
     sql: string,
     params?: unknown[],
